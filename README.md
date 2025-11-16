@@ -1,60 +1,102 @@
-# Flask Microloans API + Postgres (Docker)
+## Running the Loan API locally
 
-Minimal REST API for microloans, built with Flask, SQLAlchemy, Alembic, and PostgreSQL (via Docker Compose).
+### 1. Prerequisites
 
-## Quick start
+- Docker & docker-compose
+- Git
+- OpenSSL (for local TLS)
+
+### 2. Clone the repo
 
 ```bash
-# 1) Build and start services
-docker compose up -d --build
+git clone https://github.com/rupesh109/dummy-branch-app.git
+cd dummy-branch-app
 
-# 2) Run DB migrations
-docker compose exec api alembic upgrade head
+###3. Generate local TLS certificates
+mkdir certs
+openssl req -x509 -nodes -days 365 \
+  -newkey rsa:2048 \
+  -keyout certs/branchloans.key \
+  -out certs/branchloans.crt \
+  -subj "/CN=branchloans.com"
+###4. Map local domain
 
-# 3) Seed dummy data (idempotent)
-docker compose exec api python scripts/seed.py
+Edit /etc/hosts and add:
 
-# 4) Hit endpoints
-curl http://localhost:8000/health
-curl http://localhost:8000/api/loans
-```
+127.0.0.1   branchloans.com
 
-## Configuration
+###5. Start the dev environment
+docker-compose --env-file .env.dev up -d --build
+docker-compose --env-file .env.dev exec api alembic upgrade head
+docker-compose --env-file .env.dev exec api python -m scripts.seed
 
-See `.env.example` for env vars. By default:
-- `DATABASE_URL=postgresql+psycopg2://postgres:postgres@db:5432/microloans`
-- API listens on `localhost:8000`.
+###6. Test the API
+curl -k https://branchloans.com/health
+curl -k https://branchloans.com/api/loans
 
-## API
 
-- GET `/health` → `{ "status": "ok" }`
-- GET `/api/loans` → list all loans
-- GET `/api/loans/:id` → get loan by id
-- POST `/api/loans` → create loan (status defaults to `pending`)
 
-Example create:
+### Environments section (dev / staging / prod)
+
+## Environments
+
+This repo uses a single `docker-compose.yml` with three environment files:
+
+- `.env.dev`
+- `.env.staging`
+- `.env.prod`
+
+Each file configures:
+
+- Database name & credentials
+- Log level
+- Resource limits
+- Volume name for persistent data
+
+Examples:
+
 ```bash
-curl -X POST http://localhost:8000/api/loans \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "borrower_id": "usr_india_999",
-    "amount": 12000.50,
-    "currency": "INR",
-    "term_months": 6,
-    "interest_rate_apr": 24.0
-  }'
-```
+# Development
+docker-compose --env-file .env.dev up -d --build
 
-- GET `/api/stats` → aggregate stats: totals, avg, grouped by status/currency.
+# Staging
+docker-compose --env-file .env.staging up -d --build
 
-## Development
+# Production (local simulation)
+docker-compose --env-file .env.prod up -d --build
 
-- App entrypoint: `wsgi.py` (`wsgi:app`)
-- Flask app factory: `app/__init__.py`
-- Models: `app/models.py`
-- Migrations: `alembic/`
+##### CI/CD Pipeline
 
-## Notes
+The CI/CD pipeline is defined in `.github/workflows/ci-cd.yml` and runs on GitHub Actions.
 
-- Amounts are validated server-side (0 < amount ≤ 50000).
-- No authentication for this prototype.
+**Triggers**
+
+- `push` to `main`
+- `pull_request` targeting `main`
+
+**Stages**
+
+1. **Test**
+   - Install Python dependencies from `requirements.txt`
+   - Run tests with `pytest` (if a `tests/` directory exists)
+
+2. **Build**
+   - Build Docker image for the API using the repo `Dockerfile`
+   - Tag image with `ghcr.io/rupesh109/dummy-branch-app:<git-sha>` and `<branch-name>`
+
+3. **Security Scan**
+   - Build a local image `local/loan-api:scan`
+   - Scan the image with Trivy
+   - Fail the pipeline on HIGH or CRITICAL vulnerabilities
+
+4. **Push**
+   - Only on `push` to `main` (not PRs)
+   - Build & push image to GitHub Container Registry (`ghcr.io/rupesh109/dummy-branch-app:latest` and `:sha`)
+
+**Secrets**
+
+- `REGISTRY_USERNAME` – registry username
+- `REGISTRY_PASSWORD` – access token/password with permission to push images
+
+These are stored as GitHub Actions secrets and never committed to the repo.
+
