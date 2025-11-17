@@ -44,6 +44,7 @@ Prerequisites
 
 Instant Setup
 ### *1. git clone https://github.com/rupesh109/dummy-branch-app.git*
+
 cd dummy-branch-app
 ### *2. Generate SSL certificates*
 mkdir -p certs
@@ -135,3 +136,23 @@ The application supports three environments with different configurations optimi
 | **Development** | Local coding & debugging | 0.5 CPU, 512MB RAM | Hot reload, debug logs, exposed ports |
 | **Staging** | Pre-production testing | 1 CPU, 1GB RAM | Production-like behavior, standard logs, SSL |
 | **Production** | Live deployment | 2 CPU, 2GB RAM | Optimized performance, structured logs, security hardened |
+
+**Switching Between Environments**
+Development Environment
+Purpose: Local development with hot code reload and detailed debugging.
+
+cp .env.dev .env
+docker compose down
+docker compose up -d --build
+
+
+docker compose exec api env | grep ENV_NAME
+**Features:**
+
+✅ Hot Reload: Code changes reflect immediately
+✅ Debug Logging: Verbose LOG_LEVEL=debug
+✅ Exposed DB: Direct access on port 5432
+✅ Minimal Resources: 0.5 CPU, 512MB RAM
+✅ Fast Restart: No persistent data cleanup
+
+
