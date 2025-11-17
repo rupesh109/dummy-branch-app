@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # **Branch Loan API - Production-Ready Microfinance Platform 🚀**
 [GitHub Actions Status](https://github.com/rupesh109/dummy-branch-app/actions)
 
@@ -1107,6 +1108,7 @@ ghcr.io/rupesh109/dummy-branch-app:latest
  • Multi-environment config
 
 This mirrors real-world microservice deployments used by fintech and lending platforms.
+<<<<<<< HEAD
 
 
 ## 🚀 Future Improvements & Enhancements
@@ -1358,3 +1360,6 @@ Add:
 
 These improvements can turn the system into a **real, production-level fintech lending platform**.
 
+=======
+=======
+>>>>>>> f5ddb45 (Add prometheus and grafana metrics)

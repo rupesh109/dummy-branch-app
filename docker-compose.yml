@@ -46,6 +46,24 @@ services:
     ports:
       - "80:80"
       - "443:443"
+  prometheus:
+    image: prom/prometheus:v2.54.0
+    container_name: loan-prometheus-${ENV_NAME}
+    depends_on:
+      - api
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:11.0.0
+    container_name: loan-grafana-${ENV_NAME}
+    depends_on:
+      - prometheus
+    ports:
+      - "3000:3000"
+
 
 volumes:
   db-data-dev:
