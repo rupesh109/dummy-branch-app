@@ -88,4 +88,17 @@ openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
   -subj "/C=IN/ST=Haryana/L=Gurugram/O=Branch/OU=DevOps/CN=branchloans.com" \
   -addext "subjectAltName=DNS:branchloans.com,DNS:*.branchloans.com"
 
+Step 3: Configure Local DNS
+ Add branchloans.com to /etc/hosts
+echo "127.0.0.1 branchloans.com" | sudo tee -a /etc/hosts
+
+ Verify it was added
+cat /etc/hosts | grep branchloans
+
+Output:
+127.0.0.1 branchloans.com
+
+#### Step 4: Set Up Environment ####
+cp .env.dev .env
+cat .env
 
