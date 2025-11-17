@@ -74,13 +74,14 @@ Grafana: http://localhost:3000 (if monitoring enabled)
 
 # **📚 Running Locally (Step-by-Step)**
 Step 1: Clone and Navigate
-git clone https://github.com/YOUR_USERNAME/dummy-branch-app.git
+git clone https://github.com/rupesh109/dummy-branch-app.git
 cd dummy-branch-app
+
 Step 2: Generate SSL Certificates
-# Create certificates directory
+### *Create certificates directory*
 mkdir -p certs
 
-# Generate self-signed certificate (valid for 1 year)
+### *Generate self-signed certificate (valid for 1 year)*
 openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
   -keyout certs/branchloans.key \
   -out certs/branchloans.crt \
