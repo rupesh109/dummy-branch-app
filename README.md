@@ -51,17 +51,40 @@ openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
   -keyout certs/branchloans.key \
   -out certs/branchloans.crt \
   -subj "/C=IN/ST=Haryana/L=Gurugram/O=Branch/CN=branchloans.com"
-### 3. Add domain to hosts
+### *3. Add domain to hosts*
 echo "127.0.0.1 branchloans.com" | sudo tee -a /etc/hosts
-# 4. Copy environment file
+### *4. Copy environment file*
 cp .env.dev .env
-# 5. Start all services
+### *5. Start all services*
 docker compose up -d --build
-# 6. Initialize database
+### *6. Initialize database*
 docker compose exec api alembic upgrade head
 docker compose exec api python scripts/seed.py
-# 7. Verify it's working
+### *7. Verify it's working*
 curl -k https://branchloans.com/health
 
-# Expected Output:
+### *Expected Output:*
 {"status": "ok"}
+
+### *Access Points:*
+
+API: https://branchloans.com
+Prometheus: http://localhost:9090 (if monitoring enabled)
+Grafana: http://localhost:3000 (if monitoring enabled)
+
+# **📚 Running Locally (Step-by-Step)**
+Step 1: Clone and Navigate
+git clone https://github.com/YOUR_USERNAME/dummy-branch-app.git
+cd dummy-branch-app
+Step 2: Generate SSL Certificates
+# Create certificates directory
+mkdir -p certs
+
+# Generate self-signed certificate (valid for 1 year)
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout certs/branchloans.key \
+  -out certs/branchloans.crt \
+  -subj "/C=IN/ST=Haryana/L=Gurugram/O=Branch/OU=DevOps/CN=branchloans.com" \
+  -addext "subjectAltName=DNS:branchloans.com,DNS:*.branchloans.com"
+
+
