@@ -507,8 +507,8 @@ Endpoint
 GET /api/stats
 
 
-Response Example
-
+**Response:**
+``````````json
 {
   "total_loans": 10,
   "total_amount": 150000.0,
@@ -525,6 +525,7 @@ Response Example
   "average_term_months": 8.5,
   "average_interest_rate": 23.2
 }
+``````````
 
 
 ## 6.6 📈 Prometheus Metrics
@@ -548,16 +549,18 @@ loan_api_errors_total (counter)
 
 **Test Command**
 
-curl -k https://branchloans.com/metrics
+``````````bash
+curl -k https://branchloans.com/api/stats | jq .
+``````````
 
 
 **Sample Output**
 
-# HELP loan_api_requests_total Total API requests
+**HELP loan_api_requests_total Total API requests**
 loan_api_requests_total{method="GET",endpoint="/api/loans",status="200"} 42
 loan_api_requests_total{method="POST",endpoint="/api/loans",status="201"} 5
 
-# HELP loan_api_request_duration_seconds Request duration
+ **HELP loan_api_request_duration_seconds Request duration**
 loan_api_request_duration_seconds_sum 4.52
 loan_api_request_duration_seconds_count 47
 
@@ -591,13 +594,15 @@ Grafana — visualizes dashboards & performance charts
 
 To run monitoring along with the main application:
 
-bash
-docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
+``````````bash
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d.
+``````````
+
 
 Check running services:
-
+``````````bash
 docker compose ps
-
+``````````
 
 » Expected Running Containers
 
@@ -607,9 +612,9 @@ docker compose ps
 
 • loan-nginx-dev
 
-•loan-prometheus
+• loan-prometheus
 
-•loan-grafana
+• loan-grafana
 
 ## 7.3 🌐 Accessing Monitoring Tools
 🔍 Prometheus UI
@@ -712,11 +717,388 @@ The workflow fails in **Stage 1: TEST** with errors like:
 #### **1. Ensure migrations folder is present**
 Alembic requires `/alembic/versions` to exist.
 
+``````````bash
 ls alembic/versions
+``````````
 
 #### **2 Run migrations locally before CI**
+
 alembic upgrade head
 
-#### **3
-#### **4
-#### **1
+#### **3 Install all dependencies locally**
+pip install -r requirements.txt
+
+#### **4. Run tests locally**
+pytest -vv
+
+#### **5. Ensure test DB container starts**
+docker compose up db -d
+
+## 8.2 🧱 Docker Build Fails
+**❗ Common Error Types**
+
+ModuleNotFoundError
+
+pip install failures
+
+COPY command failing due to missing files
+
+no space left on device
+
+**✅ Fixes**
+#### **1. Clean Docker cache**
+docker system prune -af
+
+#### **2. Ensure Dockerfile paths match project**
+
+Example:
+
+COPY app/ /app/
+COPY wsgi.py /app/
+
+#### **3. Ensure Python dependencies install correctly**
+pip install -r requirements.txt
+
+## 8.3 🗄️ Database Connection Errors
+**❗ Symptoms**
+
+API logs show psycopg2.OperationalError
+
+Migrations fail
+
+Health check returns "db": "down"
+
+**🔍 Checklist**
+#### **1. Check DB container is running**
+ocker compose ps
+#### **2. Connect manually**
+
+docker exec -it loan-db-dev psql -U admin -d loans
+#### **3. Verify environment variables**
+Check .env.dev, .env.prod, .env.staging:
+
+
+Copy code
+DATABASE_URL=postgresql://admin:admin@db:5432/loans
+#### **4. Reset DB container**
+
+Copy code
+docker compose down -v
+docker compose up -d
+
+## 8.4 🔐 SSL / HTTPS Issues
+**❗ Problems**
+
+Browser shows “Connection is not secure”
+
+Nginx cannot find certificate files
+
+API not reachable over HTTPS
+
+**✅ Fixes**
+#### **1. Regenerate local certificates**
+chmod +x scripts/generate_certs.sh
+./scripts/generate_certs.sh
+
+#### **2. Restart reverse proxy**
+docker compose restart reverse-proxy
+
+#### **3. Ensure Nginx paths are correct**
+ssl_certificate /etc/nginx/certs/local.crt;
+ssl_certificate_key /etc/nginx/certs/local.key;
+
+## 8.5 🚫 API Returns 500 Internal Server Error
+
+**🔍 Debug Checklist**
+#### **1. Check API logs**
+docker compose logs api
+
+#### **2. Check database health**
+docker compose logs db
+
+#### **3. Open the interactive console**
+docker exec -it loan-api-dev bash
+
+#### **4. Validate JSON payload**
+
+Most 500s in this project come from invalid JSON fields.
+
+## 8.6 🐳 Docker Compose Not Starting
+❗ Common Issues
+
+Port already in use
+
+Missing .env files
+
+Compose version mismatch
+
+Misconfigured volumes
+
+**🔍 Fixes**
+#### **1. Check conflicting ports**
+lsof -i :8000
+lsof -i :5432
+
+#### **2. Ensure .env files exist**
+.env.dev
+.env.staging
+.env.prod
+
+#### **3. Rebuild everything**
+docker compose down -v
+docker compose build --no-cache
+docker compose up -d
+
+# **💡 Design Decisions**
+
+This section explains the reasoning behind key architectural and technical choices made in the project. The focus is on maintainability, reliability, observability, and production-readiness.
+
+---
+
+## 9.1 🏗️ Why Flask + Gunicorn?
+
+### ✔️ Reasons Chosen
+- Lightweight and fast for microservices  
+- Easy to containerize  
+- Excellent ecosystem support (Alembic, Marshmallow, Prometheus client, etc.)  
+- Gunicorn ensures production-grade concurrency and performance  
+- Simple learning curve for candidates taking a DevOps assessment
+
+### 📌 Alternatives Considered
+| Framework | Why Not Used |
+|----------|--------------|
+| FastAPI | Great choice but introduces async complexity not needed here |
+| Django | Too heavy for a small microservice |
+| Node.js | Non-Python stack, not aligned with assignment expectations |
+
+---
+
+## 9.2 🗄️ Why PostgreSQL?
+
+### ✔️ Reasons Chosen
+- Strong ACID compliance  
+- Works well for financial/loan systems  
+- Native support in SQLAlchemy  
+- Runs reliably in Docker  
+- Easy to monitor with existing dashboards
+
+### 📌 Alternatives Considered
+| DB | Reason Excluded |
+|----|-----------------|
+| SQLite | Not suitable for multi-user or production workloads |
+| MySQL | Good option, but PostgreSQL has better JSON support and stability |
+| MongoDB | No strong fit for relational loan schemas |
+
+---
+
+## 9.3 🐳 Why Docker & Multi-Container Setup?
+
+This project uses separate containers for:
+
+- API  
+- PostgreSQL  
+- Nginx reverse proxy  
+- Prometheus  
+- Grafana  
+
+### ✔️ Benefits
+- Clean separation of concerns  
+- Matches real production deployment patterns  
+- Easy to scale individual services  
+- Makes CI/CD pipelines straightforward  
+- Enables local testing of full-stack environments
+
+### 📌 Alternatives
+Single Docker container → rejected because:  
+- Harder to maintain  
+- No ability to scale components independently  
+- Not realistic for microservices environments  
+
+---
+
+## 9.4 🔄 Why Nginx Reverse Proxy?
+
+### ✔️ Purpose
+- SSL termination  
+- Route traffic to internal API  
+- Standard production pattern  
+- Hides internal ports  
+- Adds security headers (extendable)
+
+**Ports:**  
+- 80 (HTTP)  
+- 443 (HTTPS)
+
+### 📌 Alternatives
+- Traefik → more advanced but unnecessary for this assignment  
+- Caddy → automatic TLS, but Nginx is industry-standard  
+
+---
+
+## 9.5 🧰 Why SQLAlchemy + Alembic?
+
+### ✔️ Advantages
+- ORMs reduce boilerplate  
+- Migrations allow schema evolution  
+- Works perfectly with Flask  
+- Widely used in production-grade systems  
+
+### Example:
+alembic upgrade head
+alembic revision --autogenerate -m "Add new field"
+
+
+---
+
+## 9.6 📊 Why Prometheus + Grafana for Observability?
+
+ **✔️ Reasons**
+- Prometheus is the industry standard for microservices monitoring  
+- Easy integration using `prometheus_client` Python library  
+- Grafana provides powerful, highly customizable dashboards  
+- Supports alerting rules and future scaling  
+
+**Observability Principles Used**
+- **Whitebox monitoring** (internal metrics)  
+- **Structured logging** (JSON logs)  
+- **Histogram-based latency tracking**  
+- **Per-endpoint metrics**  
+
+---
+
+## 9.7 🔐 Why Self-Signed Certificates for Local SSL?
+
+### ✔️ Why Used
+- Allows HTTPS in local environments  
+- Helps simulate real production setups  
+- Needed for demonstrating Nginx termination
+
+### 📌 Future Option
+Use **LetsEncrypt** for staging & production.
+
+---
+
+## 9.8 🪶 Why JSON-Structured Logging?
+
+ **✔️ Benefits**
+- Easy to parse with `jq`  
+- Works with log aggregators like ELK or Loki  
+- Better debugging visibility  
+- Machine-friendly format
+
+**Example Log**
+```json
+{
+  "service": "loan-api",
+  "level": "INFO",
+  "method": "POST",
+  "endpoint": "/api/loans",
+  "duration_ms": 32.5
+}
+```
+## 9.9 🔐 Why No Authentication in This Version?
+**✔️ Reason**
+
+The assignment focused on:
+
+ • Dockerization
+
+ • CI/CD
+
+ • Monitoring
+
+ • API design
+
+ • Database integration
+
+Authentication was intentionally skipped to avoid scope creep.
+
+**📌 Future Recommendation**
+
+Implement:
+
+ • API keys
+
+ • JWT
+
+ • OAuth2
+
+ • Role-based access
+
+## 9.10 🔏 Why Environment-Based Config Files?
+**✔️ Benefits**
+
+Separation of dev/staging/prod settings
+
+ •Follows 12-Factor App principles
+
+ • Simpler CI/CD configuration
+
+ •Sensitive data moves to .env files
+
+**Files:**
+
+config/config_dev.py
+config/config_staging.py
+config/config_prod.py
+
+## 9.11 🚀 Why GitHub Container Registry (GHCR)?
+**✔️ Reasons**
+
+ • Private registry included with GitHub
+
+ • Easy integration with GitHub Actions
+
+ • No need for Docker Hub credentials
+
+ •Supports immutable tags
+
+ •Professional-grade image hosting
+
+**Image Path**
+ghcr.io/rupesh109/dummy-branch-app:latest
+
+## 9.12 🧪 Why Automated CI/CD?
+**✔️ Benefits**
+
+ • Ensures consistent builds
+
+ • Prevents security vulnerabilities via Trivy
+
+ • Automates test execution
+
+ • Publishes validated images only
+
+ • Enables rapid iteration
+
+**Pipeline Stages**
+
+1. Test
+
+2. Build
+
+3. Scan
+
+4. Push
+
+
+## 9.13 🌱 Why This Architecture Is Production-Ready?
+**✔️ Because it includes:**
+
+ • Containerized API
+
+ • Reverse proxy + SSL
+
+ • DB migrations
+
+ • Monitoring + dashboards
+
+ • Security scanning
+
+ • CI/CD
+
+ • Structured logs
+
+ •Multi-environment config
+
+This mirrors real-world microservice deployments used by fintech and lending platforms.
