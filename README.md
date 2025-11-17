@@ -1,11 +1,10 @@
 # **Branch Loan API - Production-Ready Microfinance Platform 🚀**
-https://github.com/rupesh109/dummy-branch-app/actions
+[GitHub Actions Status](https://github.com/rupesh109/dummy-branch-app/actions)
 
-https://img.shields.io/badge/docker-ready-blue.svg
+![Docker Ready](https://img.shields.io/badge/docker-ready-blue.svg)
+![PostgreSQL 16](https://img.shields.io/badge/postgresql-16-blue.svg)
+![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)
 
-https://img.shields.io/badge/postgresql-16-blue.svg
-
-https://img.shields.io/badge/python-3.11-blue.svg
 
 A containerized microfinance API with full CI/CD automation, monitoring, and multi-environment support.
 Built for Branch International’s DevOps internship assessment.
