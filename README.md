@@ -715,6 +715,8 @@ Alembic requires `/alembic/versions` to exist.
 ls alembic/versions
 
 #### **2 Run migrations locally before CI**
+alembic upgrade head
+
 #### **3
 #### **4
 #### **1
