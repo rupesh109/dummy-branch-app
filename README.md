@@ -73,11 +73,11 @@ Prometheus: http://localhost:9090 (if monitoring enabled)
 Grafana: http://localhost:3000 (if monitoring enabled)
 
 # **📚 Running Locally (Step-by-Step)**
-Step 1: Clone and Navigate
+#### Step 1: Clone and Navigate
 git clone https://github.com/rupesh109/dummy-branch-app.git
 cd dummy-branch-app
 
-Step 2: Generate SSL Certificates
+#### Step 2: Generate SSL Certificates
 ### *Create certificates directory*
 mkdir -p certs
 
@@ -88,7 +88,7 @@ openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
   -subj "/C=IN/ST=Haryana/L=Gurugram/O=Branch/OU=DevOps/CN=branchloans.com" \
   -addext "subjectAltName=DNS:branchloans.com,DNS:*.branchloans.com"
 
-Step 3: Configure Local DNS
+#### Step 3: Configure Local DNS
  Add branchloans.com to /etc/hosts
 echo "127.0.0.1 branchloans.com" | sudo tee -a /etc/hosts
 
@@ -102,3 +102,36 @@ Output:
 cp .env.dev .env
 cat .env
 
+#### Step 5: Start Services
+docker compose up -d --build
+
+watch docker compose ps
+
+NAME              STATUS
+loan-api-dev      Up (healthy)
+loan-db-dev       Up (healthy)
+loan-nginx-dev    Up (healthy)
+
+#### Step 6: Initialize Database
+docker compose exec api alembic upgrade head
+
+docker compose exec api python scripts/seed.py
+
+#### Step 7: Verify Everything Works
+curl -k https://branchloans.com/health
+
+curl -k https://branchloans.com/api/loans | jq .
+
+curl -k https://branchloans.com/api/stats | jq .
+
+curl -k https://branchloans.com/metrics
+
+## ⚙️ **Environment Management**
+
+The application supports three environments with different configurations optimized for their use case:
+
+| **Environment** | **Use Case** | **Resource Limits** | **Features** |
+|-----------------|-------------|---------------------|--------------|
+| **Development** | Local coding & debugging | 0.5 CPU, 512MB RAM | Hot reload, debug logs, exposed ports |
+| **Staging** | Pre-production testing | 1 CPU, 1GB RAM | Production-like behavior, standard logs, SSL |
+| **Production** | Live deployment | 2 CPU, 2GB RAM | Optimized performance, structured logs, security hardened |
