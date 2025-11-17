@@ -1,102 +1,64 @@
-## Running the Loan API locally
+# **Branch Loan API - Production-Ready Microfinance Platform 🚀**
+https://github.com/rupesh109/dummy-branch-app/actions
+https://img.shields.io/badge/docker-ready-blue.svg
+https://img.shields.io/badge/postgresql-16-blue.svg
+https://img.shields.io/badge/python-3.11-blue.svg
+A containerized microfinance API with full CI/CD automation, monitoring, and multi-environment support.
+Built for Branch International’s DevOps internship assessment.
 
-### 1. Prerequisites
+# **📋 Table of Contents**
 
-- Docker & docker-compose
-- Git
-- OpenSSL (for local TLS)
 
-### 2. Clone the repo
+1. Architecture Overview
+2. Quick Start (5 Minutes)
+3. Running Locally (Step-by-Step)
+4. Environment Management
+5. Environment Variables Reference
+6. CI/CD Pipeline
+7. API Endpoints
+8. Monitoring & Observability
+9. Troubleshooting
+10. Design Decisions
 
-```bash
-git clone https://github.com/rupesh109/dummy-branch-app.git
+# **🏗️ Architecture Overview**
+Key Components:
+| Component         | Technology       | Purpose                   | Port    |
+| ----------------- | ---------------- | ------------------------- | ------- |
+| **API**           | Flask + Gunicorn | REST API & Business Logic | 8000    |
+| **Database**      | PostgreSQL 16    | Data Persistence          | 5432    |
+| **Reverse Proxy** | Nginx            | SSL Termination & Routing | 80, 443 |
+| **Monitoring**    | Prometheus       | Metrics Collection        | 9090    |
+| **Visualization** | Grafana          | Dashboard & Alerts        | 3000    |
+
+# **🚀 Quick Start:**
+
+Prerequisites
+• Docker 20.10+
+• Docker Compose v2+
+• OpenSSL
+• 4GB+ RAM
+• Linux/macOS or Windows WSL2
+
+Instant Setup
+### *1. git clone https://github.com/rupesh109/dummy-branch-app.git*
 cd dummy-branch-app
-
-###3. Generate local TLS certificates
-mkdir certs
-openssl req -x509 -nodes -days 365 \
-  -newkey rsa:2048 \
+### *2. Generate SSL certificates*
+mkdir -p certs
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
   -keyout certs/branchloans.key \
   -out certs/branchloans.crt \
-  -subj "/CN=branchloans.com"
-###4. Map local domain
-
-Edit /etc/hosts and add:
-
-127.0.0.1   branchloans.com
-
-###5. Start the dev environment
-docker-compose --env-file .env.dev up -d --build
-docker-compose --env-file .env.dev exec api alembic upgrade head
-docker-compose --env-file .env.dev exec api python -m scripts.seed
-
-###6. Test the API
+  -subj "/C=IN/ST=Haryana/L=Gurugram/O=Branch/CN=branchloans.com"
+### 3. Add domain to hosts
+echo "127.0.0.1 branchloans.com" | sudo tee -a /etc/hosts
+# 4. Copy environment file
+cp .env.dev .env
+# 5. Start all services
+docker compose up -d --build
+# 6. Initialize database
+docker compose exec api alembic upgrade head
+docker compose exec api python scripts/seed.py
+# 7. Verify it's working
 curl -k https://branchloans.com/health
-curl -k https://branchloans.com/api/loans
 
-
-
-### Environments section (dev / staging / prod)
-
-## Environments
-
-This repo uses a single `docker-compose.yml` with three environment files:
-
-- `.env.dev`
-- `.env.staging`
-- `.env.prod`
-
-Each file configures:
-
-- Database name & credentials
-- Log level
-- Resource limits
-- Volume name for persistent data
-
-Examples:
-
-```bash
-# Development
-docker-compose --env-file .env.dev up -d --build
-
-# Staging
-docker-compose --env-file .env.staging up -d --build
-
-# Production (local simulation)
-docker-compose --env-file .env.prod up -d --build
-
-##### CI/CD Pipeline
-
-The CI/CD pipeline is defined in `.github/workflows/ci-cd.yml` and runs on GitHub Actions.
-
-**Triggers**
-
-- `push` to `main`
-- `pull_request` targeting `main`
-
-**Stages**
-
-1. **Test**
-   - Install Python dependencies from `requirements.txt`
-   - Run tests with `pytest` (if a `tests/` directory exists)
-
-2. **Build**
-   - Build Docker image for the API using the repo `Dockerfile`
-   - Tag image with `ghcr.io/rupesh109/dummy-branch-app:<git-sha>` and `<branch-name>`
-
-3. **Security Scan**
-   - Build a local image `local/loan-api:scan`
-   - Scan the image with Trivy
-   - Fail the pipeline on HIGH or CRITICAL vulnerabilities
-
-4. **Push**
-   - Only on `push` to `main` (not PRs)
-   - Build & push image to GitHub Container Registry (`ghcr.io/rupesh109/dummy-branch-app:latest` and `:sha`)
-
-**Secrets**
-
-- `REGISTRY_USERNAME` – registry username
-- `REGISTRY_PASSWORD` – access token/password with permission to push images
-
-These are stored as GitHub Actions secrets and never committed to the repo.
-
+# Expected Output:
+{"status": "ok"}
