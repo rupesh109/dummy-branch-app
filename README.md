@@ -421,77 +421,39 @@ Once the pipeline completes successfully, you can use the built images locally o
 echo $GITHUB_TOKEN | docker login ghcr.io -u rupesh109 --password-stdin
 
 
-# **📡 API Endpoints**
-**Base URL**
+## 📡 API Endpoints
 
-Local: https://branchloans.com
-Docker Network: http://api:8000
+### 🔗 Base URLs
+- **Local Access:** `https://branchloans.com`
+- **Docker Internal Network:** `http://api:8000`
 
-**Authentication**
-Current: No authentication required (prototype)
-Production: Would require API keys or OAuth2
+> **Note:** Authentication is not required in this prototype version.  
+> Production systems should implement API keys or OAuth2.
 
-**Endpoints**
-**1. Health Check**
-Purpose: Verify service and database connectivity
+---
+
+## 6.1 🩺 Health Check
+
+**Endpoint**
 GET /health
 
+
+**Purpose:** Check API + database connectivity
+
+**Successful Response**
+```json
 {
   "status": "ok",
   "db": "up",
   "timestamp": 1704638400.123
-}
+}```json
 
-**Status Codes:**
+Possible Status Codes:
 
-200 OK - Service healthy
-503 Service Unavailable - Database down
+200 OK → API & DB healthy
 
-**2. List All Loans**
-Purpose: Retrieve all loan records
+503 Service Unavailable → DB not reachable
 
-GET /api/loans
+Test Command
 
-[
-  {
-    "id": 1,
-    "borrower_id": "usr_india_123",
-    "amount": 5000.0,
-    "currency": "INR",
-    "term_months": 6,
-    "interest_rate_apr": 24.0,
-    "status": "approved",
-    "created_at": "2024-01-15T10:30:00Z",
-    "updated_at": "2024-01-15T10:30:00Z"
-  },
-  {
-    "id": 2,
-    "borrower_id": "usr_india_456",
-    "amount": 12000.5,
-    "currency": "INR",
-    "term_months": 12,
-    "interest_rate_apr": 22.0,
-    "status": "pending",
-    "created_at": "2024-01-16T14:20:00Z",
-    "updated_at": "2024-01-16T14:20:00Z"
-  }
-]
-
-**3. Get Loan by ID**
-Purpose: Retrieve specific loan details
-
-GET /api/loans/:id
-
-Response:
-
-{
-  "id": 1,
-  "borrower_id": "usr_india_123",
-  "amount": 5000.0,
-  "currency": "INR",
-  "term_months": 6,
-  "interest_rate_apr": 24.0,
-  "status": "approved",
-  "created_at": "2024-01-15T10:30:00Z",
-  "updated_at": "2024-01-15T10:30:00Z"
-}
+**curl -k https://branchloans.com/health**
