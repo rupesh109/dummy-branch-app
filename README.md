@@ -258,52 +258,39 @@ docker compose up -d
 
 
 # **🔄 CI/CD Pipeline**
-┌──────────────────────────────────────────────────────┐
-│                    Trigger Events                     │
-│  • Push to main/develop                              │
-│  • Pull request                                       │
-└──────────────────┬───────────────────────────────────┘
-                   ▼
-        ┌──────────────────────┐
-        │   Stage 1: TEST      │
-        │  • Checkout code     │
-        │  • Setup Python 3.11 │
-        │  • Install deps      │
-        │  • Run pytest        │
-        │  • Coverage report   │
-        └──────────┬───────────┘
-                   │ ✓ Tests Pass
-                   ▼
-        ┌──────────────────────┐
-        │   Stage 2: BUILD     │
-        │  • Setup Docker      │
-        │  • Build image       │
-        │  • Tag with SHA      │
-        │  • Cache layers      │
-        │  • Export artifact   │
-        └──────────┬───────────┘
-                   │ ✓ Build Success
-                   ▼
-        ┌──────────────────────┐
-        │   Stage 3: SCAN      │
-        │  • Run Trivy scan    │
-        │  • Check CVEs        │
-        │  • Upload SARIF      │
-        │  • Fail on CRITICAL  │
-        └──────────┬───────────┘
-                   │ ✓ No Critical CVEs
-                   ▼
-        ┌──────────────────────┐
-        │   Stage 4: PUSH      │
-        │  • Login to GHCR     │
-        │  • Push image        │
-        │  • Tag as latest     │
-        │  • Generate summary  │
-        └──────────────────────┘
-                   │
-                   ▼
-        📦 Image Available:
-        ghcr.io/rupesh109/dummy-branch-app:latest
+Pull request ───────────────────────────────────────────────┐ Trigger Events
+│ • Push to main/develop
+│ • Pull Request
+▼
+Stage 1: TEST ─────────────────────────────────────────────┐
+• Checkout code │
+• Setup Python 3.11 │
+• Install deps │
+• Run pytest │
+• Coverage report │
+▼ Tests Pass ▼
+
+Stage 2: BUILD ───────────────────────────────────────────┐
+• Setup Docker │
+• Build image │
+• Tag with SHA │
+• Cache layers │
+• Export artifact │
+▼ Build Success ▼
+
+Stage 3: SCAN ────────────────────────────────────────────┐
+• Run Trivy scan │
+• Check CVEs │
+• Upload SARIF │
+• Fail on CRITICAL │
+▼ No Critical CVEs ▼
+
+Stage 4: PUSH ────────────────────────────────────────────┐
+• Login to GHCR │
+• Push image │
+• Tag as latest │
+• Generate summary │
+▼ Image Available: ghcr.io/rupesh109/dummy-branch-app:latest
 
 #### Pipeline Stages Explained
 **Stage 1: Test**
