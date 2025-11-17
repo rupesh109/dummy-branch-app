@@ -441,12 +441,13 @@ GET /health
 **Purpose:** Check API + database connectivity
 
 **Successful Response**
-``json
+
 {
   "status": "ok",
   "db": "up",
   "timestamp": 1704638400.123
 }
+
 
 Possible Status Codes:
 
@@ -456,4 +457,264 @@ Possible Status Codes:
 
 Test Command
 
-**curl -k https://branchloans.com/health**
+curl -k https://branchloans.com/health
+
+## 6.2 📄 List All Loans
+
+Endpoint
+GET /api/loans
+
+## 6.3 🔍 Get Loan by ID
+Path Parameter
+
+id → Integer loan ID
+
+Response Example
+
+{
+  "id": 1,
+  "borrower_id": "usr_india_123",
+  "amount": 5000.0,
+  "currency": "INR",
+  "term_months": 6,
+  "interest_rate_apr": 24.0,
+  "status": "approved",
+  "created_at": "2024-01-15T10:30:00Z",
+  "updated_at": "2024-01-15T10:30:00Z"
+}
+
+## 6.4 🆕 Create New Loan
+
+Endpoint
+
+POST /api/loans
+Content-Type: application/json
+Request Body Example
+
+
+{
+  "borrower_id": "usr_india_999",
+  "amount": 12000.50,
+  "currency": "INR",
+  "term_months": 6,
+  "interest_rate_apr": 24.0
+}
+
+## 6.5 📊 Loan Statistics
+
+Endpoint
+
+GET /api/stats
+
+
+Response Example
+
+{
+  "total_loans": 10,
+  "total_amount": 150000.0,
+  "average_amount": 15000.0,
+  "by_status": {
+    "pending": 3,
+    "approved": 5,
+    "rejected": 2
+  },
+  "by_currency": {
+    "INR": 8,
+    "USD": 2
+  },
+  "average_term_months": 8.5,
+  "average_interest_rate": 23.2
+}
+
+
+## 6.6 📈 Prometheus Metrics
+
+Endpoint
+
+GET /metrics
+
+
+**Purpose: Exposes metrics for Prometheus scraping**
+
+Metrics Include:
+
+loan_api_requests_total (counter)
+
+loan_api_request_duration_seconds (histogram)
+
+loan_api_db_connections (gauge)
+
+loan_api_errors_total (counter)
+
+**Test Command**
+
+curl -k https://branchloans.com/metrics
+
+
+**Sample Output**
+
+# HELP loan_api_requests_total Total API requests
+loan_api_requests_total{method="GET",endpoint="/api/loans",status="200"} 42
+loan_api_requests_total{method="POST",endpoint="/api/loans",status="201"} 5
+
+# HELP loan_api_request_duration_seconds Request duration
+loan_api_request_duration_seconds_sum 4.52
+loan_api_request_duration_seconds_count 47
+
+# **## 📊 Monitoring & Observability**
+
+The application includes a complete observability setup using **Prometheus** and **Grafana**.  
+These tools help track API health, performance, errors, and database metrics.
+
+---
+
+## 7.1 🏛️ Monitoring Architecture
+
+API (Flask/Gunicorn) — exposes /metrics
+│
+▼
+Prometheus — scrapes metrics every 15 seconds
+│
+▼
+Grafana — visualizes dashboards & performance charts
+
+
+**Ports**
+| Service | Port |
+|---------|------|
+| Prometheus | `9090` |
+| Grafana | `3000` |
+
+---
+
+## 7.2 ⚙️ Starting the Monitoring Stack
+
+To run monitoring along with the main application:
+
+bash
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
+
+Check running services:
+
+docker compose ps
+
+
+» Expected Running Containers
+
+• loan-api-dev
+
+• loan-db-dev
+
+• loan-nginx-dev
+
+•loan-prometheus
+
+•loan-grafana
+
+## 7.3 🌐 Accessing Monitoring Tools
+🔍 Prometheus UI
+
+URL: http://localhost:9090
+
+Useful PromQL Queries:
+**Request rate**
+rate(loan_api_requests_total[5m])
+
+**Error rate**
+rate(loan_api_requests_total{status=~"5.."}[5m])
+
+**95th percentile latency**
+histogram_quantile(0.95, rate(loan_api_request_duration_seconds_bucket[5m]))
+
+**DB connections**
+loan_api_db_connections
+
+## 📈 Grafana UI
+
+URL: http://localhost:3000
+
+» Default Login
+
+Username: admin
+
+Password: admin
+
+» Dashboards Included
+
+• API Overview
+
+Request rate
+
+Error rate
+
+Latency metrics
+
+• Database Health
+
+Active connections
+
+Query performance
+
+• System Resources
+
+CPU & RAM usage
+
+## 7.4 📡 Custom Prometheus Metrics
+
+The API exposes rich custom metrics:
+
+| Metric                              | Type      | Description                    | Labels                         |
+| ----------------------------------- | --------- | ------------------------------ | ------------------------------ |
+| `loan_api_requests_total`           | Counter   | Total number of API calls      | `method`, `endpoint`, `status` |
+| `loan_api_request_duration_seconds` | Histogram | API response latency           | `method`, `endpoint`           |
+| `loan_api_db_connections`           | Gauge     | Active DB connections          | –                              |
+| `loan_api_errors_total`             | Counter   | Number of API errors           | `type`, `endpoint`             |
+| `loan_operations_total`             | Counter   | Loan operations by type        | `operation`, `status`          |
+| `loan_amount_total`                 | Counter   | Total loan amounts by currency | `currency`                     |
+
+These metrics help monitor both technical and business performance.
+
+## 7.7 💡 Why This Observability Setup Matters
+
+• Detect issues before they impact users
+
+• Trace slow queries or endpoints
+
+• Identify peak load periods
+
+• Drill down into error patterns
+
+• Monitor DB & API performance in real-time
+
+• Provides metrics for horizontal scaling (HPA)
+
+This ensures the system stays healthy, scalable, and debuggable.
+
+## 🛠️ Troubleshooting
+
+This section covers the most common issues you may encounter when running the application and how to fix them quickly.
+
+---
+
+## 8.1 🧪 Tests Fail During CI/CD
+
+### ❗ Problem
+The workflow fails in **Stage 1: TEST** with errors like:
+
+- Database connection errors  
+- Migration failures  
+- Missing dependencies  
+- Import errors  
+- Pytest failures  
+
+### ✅ Fixes
+
+#### **1. Ensure migrations folder is present**
+Alembic requires `/alembic/versions` to exist.
+
+ls alembic/versions
+
+#### **2 Run migrations locally before CI**
+#### **3
+#### **4
+#### **1
