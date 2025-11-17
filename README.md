@@ -257,120 +257,170 @@ docker compose up -d
 | `DB_VOLUME`         | Volume name      | `db-data-dev` | `db-data-staging`    | `db-data-prod`            | ✅        |
 
 
-# **🔄 CI/CD Pipeline**
-Pull request ───────────────────────────────────────────────┐ Trigger Events
-│ • Push to main/develop
-│ • Pull Request
-▼
-Stage 1: TEST ─────────────────────────────────────────────┐
-• Checkout code │
-• Setup Python 3.11 │
-• Install deps │
-• Run pytest │
-• Coverage report │
-▼ Tests Pass ▼
+## **🔄 CI/CD Pipeline**
 
-Stage 2: BUILD ───────────────────────────────────────────┐
-• Setup Docker │
-• Build image │
-• Tag with SHA │
-• Cache layers │
-• Export artifact │
-▼ Build Success ▼
+The project uses **GitHub Actions** to build, test, scan, and publish the Docker image to **GitHub Container Registry (GHCR)**.
 
-Stage 3: SCAN ────────────────────────────────────────────┐
-• Run Trivy scan │
-• Check CVEs │
-• Upload SARIF │
-• Fail on CRITICAL │
-▼ No Critical CVEs ▼
+---
 
-Stage 4: PUSH ────────────────────────────────────────────┐
-• Login to GHCR │
-• Push image │
-• Tag as latest │
-• Generate summary │
-▼ Image Available: ghcr.io/rupesh109/dummy-branch-app:latest
+### 🔔 Pipeline Triggers
 
-#### Pipeline Stages Explained
-**Stage 1: Test**
-Purpose: Verify code quality and functionality before building.
-Actions:
-- Checkout repository
-- Setup Python 3.11 with pip caching
-- Install requirements.txt
-- Start PostgreSQL service container
-- Run Alembic migrations
-- Execute pytest with coverage
-- Upload coverage to Codecov
+The workflow runs automatically on:
 
-**Stage 2: Build**
-Purpose: Create Docker image with proper tagging.
-Actions:
-- Setup Docker Buildx (multi-platform)
-- Extract metadata (branch, SHA, tags)
-- Build Docker image
-- Apply tags: latest, main-abc123, v1.0.0
-- Cache layers (GitHub Actions cache)
-- Export image as artifact
+- **Push** to:
+  - `main`
+  - `develop`
+- **Pull Requests** targeting `main` or `develop`
+- **Manual trigger** from the **Actions** tab
 
-**Stage 3: Security Scan**
-Purpose: Identify vulnerabilities before deployment.
-Actions:
-- Download image artifact from Build stage
-- Load Docker image
-- Run Trivy vulnerability scanner
-- Generate SARIF report
-- Upload to GitHub Security tab
-- Fail on CRITICAL severity
+---
 
-**Stage 4: Push**
-Purpose: Publish image to container registry.
-Actions:
-- Login to GitHub Container Registry
-- Push all tags
-- Update package permissions
-- Generate deployment summary
+### 🧱 High-Level Flow
 
-Registry: ghcr.io/rupesh109/dummy-branch-app
+1. **Stage 1 – TEST**  
+   ✅ Run tests and verify code quality
 
-**Conditions:**
+2. **Stage 2 – BUILD**  
+   ✅ Build and tag the Docker image
 
-Only runs on push to main/develop
-All previous stages must pass
-Not triggered by pull requests
+3. **Stage 3 – SCAN**  
+   ✅ Run security scan (Trivy) and fail on critical CVEs
 
+4. **Stage 4 – PUSH**  
+   ✅ Push the verified image to **GHCR**
 
-**Triggering the Pipeline**
-Automatic Triggers
+> **Final Image:**  
+> `ghcr.io/rupesh109/dummy-branch-app:latest`
 
-git checkout main
-git add .
-git commit -m "feat: add new feature"
-git push origin main
+---
 
-**Push to develop (full pipeline with push)**
-git checkout develop
-git push origin develop
+### 🧪 Stage 1: TEST
 
-**Pull request (test, build, scan only - no push)**
-git checkout -b feature/new-endpoint
-git push origin feature/new-endpoint
-**Create PR on GitHub**
+**Purpose:** Verify code quality and functionality before building.
 
+**Key Actions:**
 
-**Pipeline Configuration**
-Location: .github/workflows/ci-cd.yml
-Environment Variables:
+- Checkout repository  
+- Setup **Python 3.11** (with pip caching)  
+- Install dependencies from `requirements.txt`  
+- Start PostgreSQL service container  
+- Run **Alembic migrations**  
+- Execute **pytest** with coverage  
+- Upload coverage report (e.g. to Codecov, if configured)
 
-REGISTRY: ghcr.io
-IMAGE_NAME: ${{ github.repository }}
+**Fails if:**
 
-**Secrets Used:**
+- Tests fail  
+- Coverage threshold is not met  
+- There are syntax/import errors  
 
-GITHUB_TOKEN (automatically provided)
+**Typical duration:** ~2–3 minutes
 
-No additional secrets required! The pipeline uses GitHub's built-in authentication.
+---
+
+### 🏗️ Stage 2: BUILD
+
+**Purpose:** Build the Docker image with proper tagging and caching.
+
+**Key Actions:**
+
+- Setup **Docker Buildx** (multi-platform capable)  
+- Extract metadata (branch, SHA, tags)  
+- Build Docker image using the project `Dockerfile`  
+- Tag image with:
+  - `latest`
+  - `main-<short-sha>`  
+  - `develop` (for develop branch)  
+  - `vX.Y.Z` (for release tags, if any)
+- Cache image layers via GitHub Actions cache  
+- Export the built image as an artifact for the next stage
+
+**Fails if:**
+
+- Dockerfile is invalid  
+- Build step fails  
+- Runner runs out of disk space  
+
+**Typical duration:** ~3–5 minutes
+
+---
+
+### 🛡️ Stage 3: SCAN
+
+**Purpose:** Catch vulnerabilities **before** the image is published.
+
+**Key Actions:**
+
+- Download the image artifact from the **Build** stage  
+- Load the Docker image  
+- Run **Trivy** vulnerability scanner  
+- Generate **SARIF** report  
+- Upload the report to GitHub → **Security → Code scanning alerts**  
+- **Fail the pipeline if any CRITICAL CVEs are found**
+
+**Coverage:**
+
+- OS packages (Debian/Alpine)  
+- Python dependencies (pip)  
+- Known CVEs  
+- Potential exposed secrets (depending on Trivy config)
+
+**Fails if:**
+
+- Trivy encounters critical vulnerabilities  
+- Trivy itself errors out
+
+**Typical duration:** ~1–2 minutes
+
+---
+
+### 📦 Stage 4: PUSH
+
+**Purpose:** Publish the verified image to **GitHub Container Registry**.
+
+**Key Actions:**
+
+- Login to `ghcr.io` using `GITHUB_TOKEN`  
+- Push all relevant tags, for example:
+  - `ghcr.io/rupesh109/dummy-branch-app:latest`
+  - `ghcr.io/rupesh109/dummy-branch-app:main-<short-sha>`
+  - `ghcr.io/rupesh109/dummy-branch-app:develop`
+- Update GitHub **Packages** metadata  
+- Generate a short summary in the workflow output
+
+**Runs only when:**
+
+- Branch is `main` or `develop`  
+- All previous stages have passed  
+- The event is **not** just a PR from a fork (to avoid pushing untrusted images)
+
+**Typical duration:** ~30–60 seconds
+
+---
+
+### ⚙️ Workflow Configuration
+
+- **Workflow file:** `.github/workflows/ci-cd.yml`  
+- **Core environment variables:**
+  - `REGISTRY=ghcr.io`
+  - `IMAGE_NAME=${{ github.repository }}`
+
+- **Secrets used:**
+  - `GITHUB_TOKEN` (provided automatically by GitHub)
+
+> No extra secrets are needed for pushing to **GHCR**. Authentication is handled via `GITHUB_TOKEN`.
+
+---
+
+### 🚀 Using the Published Images
+
+Once the pipeline completes successfully, you can use the built images locally or in any environment.
+
+**Login to GHCR:**
+
+```bash
+echo $GITHUB_TOKEN | docker login ghcr.io -u rupesh109 --password-stdin
+
 
 # **📡 API Endpoints**
 **Base URL**
