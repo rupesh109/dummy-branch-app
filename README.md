@@ -228,11 +228,15 @@ docker compose exec api env | grep ENV_NAME
 
  **Test all three environments**
 for env in dev staging prod; do
+
   echo "Testing $env environment..."
+  
   cp .env.$env .env
   docker compose down -v
   docker compose up -d --build
+  
   sleep 30
+  
   docker compose exec api alembic upgrade head
   curl -k https://branchloans.com/health
   echo "✓ $env environment working"
@@ -240,6 +244,7 @@ done
 
  **Return to development**
 cp .env.dev .env
+
 docker compose up -d
 
 #### Database Configuration
@@ -252,5 +257,205 @@ docker compose up -d
 | `DB_VOLUME`         | Volume name      | `db-data-dev` | `db-data-staging`    | `db-data-prod`            | ✅        |
 
 
-# **🔄 CI/CD Pipeline*
+# **🔄 CI/CD Pipeline**
+┌──────────────────────────────────────────────────────┐
+│                    Trigger Events                     │
+│  • Push to main/develop                              │
+│  • Pull request                                       │
+└──────────────────┬───────────────────────────────────┘
+                   ▼
+        ┌──────────────────────┐
+        │   Stage 1: TEST      │
+        │  • Checkout code     │
+        │  • Setup Python 3.11 │
+        │  • Install deps      │
+        │  • Run pytest        │
+        │  • Coverage report   │
+        └──────────┬───────────┘
+                   │ ✓ Tests Pass
+                   ▼
+        ┌──────────────────────┐
+        │   Stage 2: BUILD     │
+        │  • Setup Docker      │
+        │  • Build image       │
+        │  • Tag with SHA      │
+        │  • Cache layers      │
+        │  • Export artifact   │
+        └──────────┬───────────┘
+                   │ ✓ Build Success
+                   ▼
+        ┌──────────────────────┐
+        │   Stage 3: SCAN      │
+        │  • Run Trivy scan    │
+        │  • Check CVEs        │
+        │  • Upload SARIF      │
+        │  • Fail on CRITICAL  │
+        └──────────┬───────────┘
+                   │ ✓ No Critical CVEs
+                   ▼
+        ┌──────────────────────┐
+        │   Stage 4: PUSH      │
+        │  • Login to GHCR     │
+        │  • Push image        │
+        │  • Tag as latest     │
+        │  • Generate summary  │
+        └──────────────────────┘
+                   │
+                   ▼
+        📦 Image Available:
+        ghcr.io/rupesh109/dummy-branch-app:latest
 
+#### Pipeline Stages Explained
+**Stage 1: Test**
+Purpose: Verify code quality and functionality before building.
+Actions:
+- Checkout repository
+- Setup Python 3.11 with pip caching
+- Install requirements.txt
+- Start PostgreSQL service container
+- Run Alembic migrations
+- Execute pytest with coverage
+- Upload coverage to Codecov
+
+**Stage 2: Build**
+Purpose: Create Docker image with proper tagging.
+Actions:
+- Setup Docker Buildx (multi-platform)
+- Extract metadata (branch, SHA, tags)
+- Build Docker image
+- Apply tags: latest, main-abc123, v1.0.0
+- Cache layers (GitHub Actions cache)
+- Export image as artifact
+
+**Stage 3: Security Scan**
+Purpose: Identify vulnerabilities before deployment.
+Actions:
+- Download image artifact from Build stage
+- Load Docker image
+- Run Trivy vulnerability scanner
+- Generate SARIF report
+- Upload to GitHub Security tab
+- Fail on CRITICAL severity
+
+**Stage 4: Push**
+Purpose: Publish image to container registry.
+Actions:
+- Login to GitHub Container Registry
+- Push all tags
+- Update package permissions
+- Generate deployment summary
+
+Registry: ghcr.io/rupesh109/dummy-branch-app
+
+**Conditions:**
+
+Only runs on push to main/develop
+All previous stages must pass
+Not triggered by pull requests
+
+
+**Triggering the Pipeline**
+Automatic Triggers
+
+git checkout main
+git add .
+git commit -m "feat: add new feature"
+git push origin main
+
+**Push to develop (full pipeline with push)**
+git checkout develop
+git push origin develop
+
+**Pull request (test, build, scan only - no push)**
+git checkout -b feature/new-endpoint
+git push origin feature/new-endpoint
+**Create PR on GitHub**
+
+
+**Pipeline Configuration**
+Location: .github/workflows/ci-cd.yml
+Environment Variables:
+
+REGISTRY: ghcr.io
+IMAGE_NAME: ${{ github.repository }}
+
+**Secrets Used:**
+
+GITHUB_TOKEN (automatically provided)
+
+No additional secrets required! The pipeline uses GitHub's built-in authentication.
+
+# **📡 API Endpoints**
+**Base URL**
+
+Local: https://branchloans.com
+Docker Network: http://api:8000
+
+**Authentication**
+Current: No authentication required (prototype)
+Production: Would require API keys or OAuth2
+
+**Endpoints**
+**1. Health Check**
+Purpose: Verify service and database connectivity
+GET /health
+
+{
+  "status": "ok",
+  "db": "up",
+  "timestamp": 1704638400.123
+}
+
+**Status Codes:**
+
+200 OK - Service healthy
+503 Service Unavailable - Database down
+
+**2. List All Loans**
+Purpose: Retrieve all loan records
+
+GET /api/loans
+
+[
+  {
+    "id": 1,
+    "borrower_id": "usr_india_123",
+    "amount": 5000.0,
+    "currency": "INR",
+    "term_months": 6,
+    "interest_rate_apr": 24.0,
+    "status": "approved",
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:30:00Z"
+  },
+  {
+    "id": 2,
+    "borrower_id": "usr_india_456",
+    "amount": 12000.5,
+    "currency": "INR",
+    "term_months": 12,
+    "interest_rate_apr": 22.0,
+    "status": "pending",
+    "created_at": "2024-01-16T14:20:00Z",
+    "updated_at": "2024-01-16T14:20:00Z"
+  }
+]
+
+**3. Get Loan by ID**
+Purpose: Retrieve specific loan details
+
+GET /api/loans/:id
+
+Response:
+
+{
+  "id": 1,
+  "borrower_id": "usr_india_123",
+  "amount": 5000.0,
+  "currency": "INR",
+  "term_months": 6,
+  "interest_rate_apr": 24.0,
+  "status": "approved",
+  "created_at": "2024-01-15T10:30:00Z",
+  "updated_at": "2024-01-15T10:30:00Z"
+}
