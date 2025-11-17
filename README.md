@@ -418,7 +418,6 @@ Once the pipeline completes successfully, you can use the built images locally o
 
 **Login to GHCR:**
 
-```bash
 echo $GITHUB_TOKEN | docker login ghcr.io -u rupesh109 --password-stdin
 
 
