@@ -138,7 +138,9 @@ The application supports three environments with different configurations optimi
 | **Production** | Live deployment | 2 CPU, 2GB RAM | Optimized performance, structured logs, security hardened |
 
 **Switching Between Environments**
+
 Development Environment
+
 Purpose: Local development with hot code reload and detailed debugging.
 
 cp .env.dev .env
@@ -147,12 +149,108 @@ docker compose up -d --build
 
 
 docker compose exec api env | grep ENV_NAME
+
 **Features:**
 
 ✅ Hot Reload: Code changes reflect immediately
+
 ✅ Debug Logging: Verbose LOG_LEVEL=debug
+
 ✅ Exposed DB: Direct access on port 5432
+
 ✅ Minimal Resources: 0.5 CPU, 512MB RAM
+
 ✅ Fast Restart: No persistent data cleanup
 
+**Staging Environment**
+Purpose: Test production configuration before deploying to prod.
+
+cp .env.staging .env
+docker compose down
+docker compose up -d --build
+
+docker compose exec api env | grep ENV_NAME
+ Output: ENV_NAME=staging
+
+**Features:**
+
+✅ Production-Like: Mimics prod settings
+
+✅ Standard Logging: LOG_LEVEL=info
+
+✅ No Hot Reload: Static code deployment
+
+✅ Medium Resources: 1 CPU, 1GB RAM
+
+✅ SSL Enabled: Full HTTPS setup
+
+✅ Separate DB: Different credentials from dev
+
+**Production Environment**
+Purpose: Live deployment with maximum performance and security.
+
+cp .env.prod .env
+
+nano .env
+
+docker compose down
+docker compose up -d --build
+
+docker compose exec api env | grep ENV_NAME
+ Output: ENV_NAME=prod
+ 
+**Features:**
+
+✅ Optimized: Maximum performance settings
+
+✅ Warning Logs Only: LOG_LEVEL=warning
+
+✅ Structured Logging: JSON formatted logs
+
+✅ Maximum Resources: 2 CPU, 2GB RAM
+
+✅ Data Persistence: Guaranteed volume persistence
+
+✅ Security Hardened: Non-root users, secure headers
+
+✅ Separate Network: Isolated from other environments
+
+# **📊 Environment Variables Reference**
+
+#### Core Configuration
+
+| Variable    | Description            | Dev           | Staging      | Prod         | Required |
+| ----------- | ---------------------- | ------------- | ------------ | ------------ | -------- |
+| `ENV_NAME`  | Environment identifier | `dev`         | `staging`    | `prod`       | ✅       |
+| `FLASK_ENV` | Flask runtime mode     | `development` | `production` | `production` | ✅       |
+| `LOG_LEVEL` | Logging verbosity      | `debug`       | `info`       | `warning`    | ✅       |
+
+
+ **Test all three environments**
+for env in dev staging prod; do
+  echo "Testing $env environment..."
+  cp .env.$env .env
+  docker compose down -v
+  docker compose up -d --build
+  sleep 30
+  docker compose exec api alembic upgrade head
+  curl -k https://branchloans.com/health
+  echo "✓ $env environment working"
+done
+
+ **Return to development**
+cp .env.dev .env
+docker compose up -d
+
+#### Database Configuration
+| Variable            | Description      | Dev           | Staging              | Prod                      | Required |
+| ------------------- | ---------------- | ------------- | -------------------- | ------------------------- | -------- |
+| `POSTGRES_USER`     | DB username      | `postgres`    | `branch`             | `branch_prod`             | ✅        |
+| `POSTGRES_PASSWORD` | DB password      | `postgres`    | `staging-secret`     | **⚠ MUST CHANGE IN PROD** | ✅        |
+| `POSTGRES_DB`       | Database name    | `microloans`  | `microloans_staging` | `microloans_prod`         | ✅        |
+| `DB_PORT`           | External DB port | `5432`        | `5433`               | `5434`                    | ✅        |
+| `DB_VOLUME`         | Volume name      | `db-data-dev` | `db-data-staging`    | `db-data-prod`            | ✅        |
+
+
+# **🔄 CI/CD Pipeline*
 
