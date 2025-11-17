@@ -441,12 +441,12 @@ GET /health
 **Purpose:** Check API + database connectivity
 
 **Successful Response**
-```json
+``json
 {
   "status": "ok",
   "db": "up",
   "timestamp": 1704638400.123
-}```json
+}
 
 Possible Status Codes:
 
