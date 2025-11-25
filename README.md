@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # **Branch Loan API - Production-Ready Microfinance Platform 🚀**
 [GitHub Actions Status](https://github.com/rupesh109/dummy-branch-app/actions)
 
